@@ -1,0 +1,46 @@
+groups:
+  - name: vigil_alerts
+    rules:
+      # ── 5xx Error Rate Alert ──
+      - alert: High5xxRate
+        expr: increase(flask_http_errors_total[1m]) > 3
+        for: 10s
+        labels:
+          severity: critical
+          service: flask-app
+        annotations:
+          summary: "High 5xx error rate on flask-app"
+          description: "More than 3 HTTP 500 errors detected in the last 60 seconds."
+
+      # ── PostgreSQL Down Alert ──
+      - alert: PostgresDown
+        expr: pg_up == 0
+        for: 10s
+        labels:
+          severity: critical
+          service: postgres
+        annotations:
+          summary: "PostgreSQL database is down"
+          description: "The PostgreSQL instance has been unreachable for more than 10 seconds."
+
+      # ── Flask App Down Alert ──
+      - alert: FlaskAppDown
+        expr: up{job="flask-app"} == 0
+        for: 15s
+        labels:
+          severity: critical
+          service: flask-app
+        annotations:
+          summary: "Flask application is down"
+          description: "The Flask chaos app target has been down for more than 15 seconds."
+
+      # ── High Request Latency Alert ──
+      - alert: HighRequestLatency
+        expr: histogram_quantile(0.95, rate(flask_http_request_duration_seconds_bucket[2m])) > 5
+        for: 30s
+        labels:
+          severity: warning
+          service: flask-app
+        annotations:
+          summary: "High request latency on flask-app"
+          description: "95th percentile request latency is above 5 seconds."

@@ -1,0 +1,16 @@
+global:
+  resolve_timeout: 1m
+
+route:
+  receiver: "vigil-webhook"
+  group_by: ["alertname", "service"]
+  group_wait: 5s
+  group_interval: 10s
+  repeat_interval: 1m
+
+receivers:
+  - name: "vigil-webhook"
+    webhook_configs:
+      - url: "http://vigil-api:8000/incident"
+        send_resolved: true
+        max_alerts: 10

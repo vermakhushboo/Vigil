@@ -8,6 +8,7 @@ Uses NVIDIA's OpenAI-compatible API endpoint to access Mistral models.
 """
 import json
 import logging
+import asyncio
 from typing import Callable, Awaitable, Optional
 
 from openai import AsyncOpenAI
@@ -32,8 +33,10 @@ Call tools iteratively until you have identified:
 3. Any recent changes (deploys/commits) that may have caused it
 4. A relevant runbook or past resolution
 
-Only stop investigating when you have enough context to brief an engineer confidently.
-Be concise. Engineers are asleep.
+CRITICAL RULES:
+- Only stop investigating when you have enough context to brief an engineer confidently.
+- NEVER call the exact same tool with the exact same arguments twice. If a tool returns the same logs or commits, do not retry it. Move on to a different tool or finalize your investigation.
+- Be concise. Engineers are asleep.
 
 When you have completed your investigation, respond with a JSON summary in this exact format:
 {
@@ -234,11 +237,11 @@ async def investigate(incident: Incident, on_event: EventCallback = None) -> Inc
                 except json.JSONDecodeError:
                     func_args = {}
 
-                # Execute the tool
+                # Execute the tool inside a thread so it doesn't block the event loop
                 tool_func = TOOL_FUNCTIONS.get(func_name)
                 if tool_func:
                     try:
-                        result = tool_func(**func_args)
+                        result = await asyncio.to_thread(tool_func, **func_args)
                     except Exception as e:
                         result = f"Tool '{func_name}' failed: {e}"
                         logger.error(f"❌ Tool {func_name} failed: {e}")

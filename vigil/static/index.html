@@ -1,12 +1,21 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vigil — Incident Response Dashboard</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
     <style>
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
         :root {
             --bg-primary: #0a0e1a;
@@ -108,11 +117,21 @@
             animation: pulse 2s infinite;
         }
 
-        .status-dot.disconnected { background: var(--critical); animation: none; }
+        .status-dot.disconnected {
+            background: var(--critical);
+            animation: none;
+        }
 
         @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.4; }
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.4;
+            }
         }
 
         /* ─── Main Layout ─── */
@@ -169,9 +188,19 @@
             transform: translateY(-1px);
         }
 
-        .trigger-btn:active { transform: translateY(0); }
-        .trigger-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-        .trigger-btn .icon { font-size: 16px; }
+        .trigger-btn:active {
+            transform: translateY(0);
+        }
+
+        .trigger-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .trigger-btn .icon {
+            font-size: 16px;
+        }
 
         /* ─── Incidents Grid ─── */
         .section-title {
@@ -207,8 +236,15 @@
             color: var(--text-muted);
         }
 
-        .empty-state .icon { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
-        .empty-state p { font-size: 14px; }
+        .empty-state .icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .empty-state p {
+            font-size: 14px;
+        }
 
         /* ─── Incident Card ─── */
         .incident-card {
@@ -220,15 +256,32 @@
             animation: slideIn 0.4s ease-out;
         }
 
-        .incident-card:hover { border-color: var(--border-light); }
+        .incident-card:hover {
+            border-color: var(--border-light);
+        }
 
-        .incident-card.severity-critical { border-left: 3px solid var(--critical); }
-        .incident-card.severity-warning { border-left: 3px solid var(--warning); }
-        .incident-card.severity-info { border-left: 3px solid var(--info); }
+        .incident-card.severity-critical {
+            border-left: 3px solid var(--critical);
+        }
+
+        .incident-card.severity-warning {
+            border-left: 3px solid var(--warning);
+        }
+
+        .incident-card.severity-info {
+            border-left: 3px solid var(--info);
+        }
 
         @keyframes slideIn {
-            from { opacity: 0; transform: translateY(-12px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(-12px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .incident-header {
@@ -239,9 +292,16 @@
             cursor: pointer;
         }
 
-        .incident-header:hover { background: var(--bg-card-hover); }
+        .incident-header:hover {
+            background: var(--bg-card-hover);
+        }
 
-        .incident-info { display: flex; align-items: center; gap: 14px; flex: 1; }
+        .incident-info {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex: 1;
+        }
 
         .severity-indicator {
             font-size: 11px;
@@ -252,9 +312,20 @@
             border-radius: 6px;
         }
 
-        .severity-critical { color: var(--critical); background: var(--critical-bg); }
-        .severity-warning { color: var(--warning); background: var(--warning-bg); }
-        .severity-info { color: var(--info); background: var(--info-bg); }
+        .severity-critical {
+            color: var(--critical);
+            background: var(--critical-bg);
+        }
+
+        .severity-warning {
+            color: var(--warning);
+            background: var(--warning-bg);
+        }
+
+        .severity-info {
+            color: var(--info);
+            background: var(--info-bg);
+        }
 
         .incident-title {
             font-size: 14px;
@@ -278,18 +349,37 @@
             border-radius: 6px;
         }
 
-        .status-received { color: var(--text-secondary); background: rgba(148, 163, 184, 0.1); }
+        .status-received {
+            color: var(--text-secondary);
+            background: rgba(148, 163, 184, 0.1);
+        }
+
         .status-investigating {
             color: var(--warning);
             background: var(--warning-bg);
             animation: investigating-pulse 1.5s infinite;
         }
-        .status-calling { color: var(--success); background: var(--success-bg); }
-        .status-resolved { color: var(--success); background: var(--success-bg); }
+
+        .status-calling {
+            color: var(--success);
+            background: var(--success-bg);
+        }
+
+        .status-resolved {
+            color: var(--success);
+            background: var(--success-bg);
+        }
 
         @keyframes investigating-pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.6; }
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.6;
+            }
         }
 
         /* ─── Timeline ─── */
@@ -298,7 +388,9 @@
             border-top: 1px solid var(--border);
         }
 
-        .incident-card.expanded .incident-body { display: block; }
+        .incident-card.expanded .incident-body {
+            display: block;
+        }
 
         .timeline {
             padding: 20px;
@@ -323,8 +415,15 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateX(-8px); }
-            to { opacity: 1; transform: translateX(0); }
+            from {
+                opacity: 0;
+                transform: translateX(-8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
         }
 
         .timeline-icon {
@@ -339,11 +438,31 @@
             z-index: 1;
         }
 
-        .timeline-icon.tool-call { background: var(--info-bg); border: 1px solid rgba(59, 130, 246, 0.3); }
-        .timeline-icon.tool-result { background: var(--success-bg); border: 1px solid rgba(16, 185, 129, 0.3); }
-        .timeline-icon.status { background: var(--warning-bg); border: 1px solid rgba(245, 158, 11, 0.3); }
-        .timeline-icon.findings { background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.3); }
-        .timeline-icon.briefing { background: var(--success-bg); border: 1px solid rgba(16, 185, 129, 0.3); }
+        .timeline-icon.tool-call {
+            background: var(--info-bg);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+
+        .timeline-icon.tool-result {
+            background: var(--success-bg);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .timeline-icon.status {
+            background: var(--warning-bg);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        .timeline-icon.findings {
+            background: rgba(139, 92, 246, 0.1);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+        }
+
+        .timeline-icon.briefing {
+            background: var(--success-bg);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
         .timeline-icon.loading {
             background: var(--warning-bg);
             border: 1px solid rgba(245, 158, 11, 0.3);
@@ -351,8 +470,13 @@
         }
 
         @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         .timeline-content {
@@ -460,17 +584,143 @@
             word-break: break-word;
         }
 
-        .finding-item.full-width { grid-column: 1 / -1; }
+        .finding-item.full-width {
+            grid-column: 1 / -1;
+        }
+
+        /* ─── Chat Interface ─── */
+        .chat-container {
+            margin: 0 20px 20px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-header {
+            padding: 10px 16px;
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .chat-messages {
+            padding: 16px;
+            max-height: 250px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            font-size: 13px;
+        }
+
+        .chat-message {
+            max-width: 85%;
+            padding: 10px 14px;
+            border-radius: var(--radius-sm);
+            line-height: 1.5;
+        }
+
+        .msg-user {
+            align-self: flex-end;
+            background: var(--accent);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .msg-agent {
+            align-self: flex-start;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            border-bottom-left-radius: 4px;
+        }
+
+        .chat-input-area {
+            display: flex;
+            padding: 10px;
+            gap: 8px;
+            border-top: 1px solid var(--border);
+            background: var(--bg-card);
+        }
+
+        .chat-input {
+            flex: 1;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 8px 16px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 13px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .chat-input:focus {
+            border-color: var(--accent);
+        }
+
+        .chat-send {
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .chat-send:hover {
+            background: #4f46e5;
+            transform: scale(1.05);
+        }
+
+        .chat-send:disabled {
+            background: var(--border);
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        audio {
+            width: 100%;
+            margin-top: 12px;
+            border-radius: 6px;
+            height: 36px;
+        }
 
         /* ─── Responsive ─── */
         @media (max-width: 768px) {
-            .header { padding: 12px 16px; }
-            .main { padding: 16px; }
-            .trigger-buttons { flex-direction: column; }
-            .findings-grid { grid-template-columns: 1fr; }
+            .header {
+                padding: 12px 16px;
+            }
+
+            .main {
+                padding: 16px;
+            }
+
+            .trigger-buttons {
+                flex-direction: column;
+            }
+
+            .findings-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
+
 <body>
     <header class="header">
         <div class="logo">
@@ -527,7 +777,7 @@
         // ═══════════════════════════════════════
         const SCENARIOS = {
             '5xx': { title: 'High 5xx error rate on flask-app', severity: 'critical', service: 'flask-app' },
-            'db':  { title: 'PostgreSQL database unreachable', severity: 'critical', service: 'postgres' },
+            'db': { title: 'PostgreSQL database unreachable', severity: 'critical', service: 'postgres' },
             'cpu': { title: 'CPU spike causing high latency on flask-app', severity: 'warning', service: 'flask-app' },
         };
 
@@ -605,6 +855,12 @@
                             label: statusLabels[data.status].substring(2), time: timestamp,
                         });
                     }
+                    renderIncident(incident_id);
+                    break;
+
+                case 'audio_ready':
+                    if (!incidents[incident_id]) break;
+                    incidents[incident_id].data.audio_url = data.audio_url;
                     renderIncident(incident_id);
                     break;
 
@@ -712,7 +968,8 @@
                         ${inc._loading ? renderTimelineItem({ type: 'loading', icon: '⏳', label: 'Agent thinking...', time: new Date().toISOString() }) : ''}
                     </div>
                     ${inc.data.findings ? renderFindings(inc.data.findings) : ''}
-                    ${inc.data.briefing ? renderBriefing(inc.data.briefing) : ''}
+                    ${(inc.data.briefing || inc.data.briefing_script) ? renderBriefing(inc.data) : ''}
+                    ${status === 'calling' || status === 'resolved' ? renderChatBox(id, inc) : ''}
                 </div>
             `;
 
@@ -764,13 +1021,93 @@
             `;
         }
 
-        function renderBriefing(text) {
+        function renderBriefing(data) {
+            const text = data.briefing || data.briefing_script || '';
+            const audio = data.audio_url || data.briefing_audio_url || '';
             return `
                 <div class="briefing-card">
                     <h4>🎤 Voice Briefing Script</h4>
                     <div class="briefing-text">"${escapeHtml(text)}"</div>
+                    ${audio ? `<audio controls src="${audio}"></audio>` : ''}
                 </div>
             `;
+        }
+
+        function renderChatBox(id, inc) {
+            const transcript = inc.data.call_transcript || [];
+            if (!inc.data.call_transcript) {
+                inc.data.call_transcript = [];
+            }
+
+            let msgsHtml = transcript.map(t => `
+                <div class="chat-message msg-user">${escapeHtml(t.question)}</div>
+                <div class="chat-message msg-agent">${escapeHtml(t.answer)}</div>
+            `).join('');
+
+            if (msgsHtml === '') {
+                msgsHtml = `<div class="chat-message msg-agent" style="opacity: 0.7; font-style: italic; align-self: center; background: transparent; border: none;">No questions asked yet. Ask Vigil anything about this incident.</div>`;
+            }
+
+            return `
+                <div class="chat-container">
+                    <div class="chat-header">💬 Chat with Vigil Agent</div>
+                    <div class="chat-messages" id="chat-msgs-${id}">${msgsHtml}</div>
+                    <div class="chat-input-area">
+                        <input type="text" class="chat-input" id="chat-input-${id}" placeholder="Type your question..." onkeypress="if(event.key === 'Enter') sendChatMessage('${id}')">
+                        <button class="chat-send" id="chat-send-${id}" onclick="sendChatMessage('${id}')">➤</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function sendChatMessage(id) {
+            const input = document.getElementById(`chat-input-${id}`);
+            const btn = document.getElementById(`chat-send-${id}`);
+            const msgs = document.getElementById(`chat-msgs-${id}`);
+            const text = input.value.trim();
+            if (!text) return;
+
+            // Optimistic UI
+            if (msgs.innerText.includes('No questions asked yet')) msgs.innerHTML = '';
+            msgs.innerHTML += `<div class="chat-message msg-user">${escapeHtml(text)}</div>`;
+            msgs.scrollTop = msgs.scrollHeight;
+
+            // Show loading
+            const loadingId = 'loading-' + Date.now();
+            msgs.innerHTML += `<div class="chat-message msg-agent" id="${loadingId}">...</div>`;
+            msgs.scrollTop = msgs.scrollHeight;
+
+            input.value = '';
+            input.disabled = true;
+            btn.disabled = true;
+
+            try {
+                const resp = await fetch(`/incident/${id}/ask`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question: text }),
+                });
+                const result = await resp.json();
+
+                // Remove loading
+                document.getElementById(loadingId).remove();
+
+                if (result.answer) {
+                    msgs.innerHTML += `<div class="chat-message msg-agent">${escapeHtml(result.answer)}</div>`;
+                    // Update our local state so it persists across renders
+                    incidents[id].data.call_transcript.push({ question: text, answer: result.answer });
+                } else {
+                    msgs.innerHTML += `<div class="chat-message msg-agent" style="color: var(--critical)">Error getting response.</div>`;
+                }
+            } catch (e) {
+                document.getElementById(loadingId).remove();
+                msgs.innerHTML += `<div class="chat-message msg-agent" style="color: var(--critical)">Failed to send request.</div>`;
+            } finally {
+                msgs.scrollTop = msgs.scrollHeight;
+                input.disabled = false;
+                btn.disabled = false;
+                input.focus();
+            }
         }
 
         function toggleCard(id) {
@@ -808,7 +1145,7 @@
                                 const fullData = await full.json();
                                 if (fullData.findings) incidents[inc.id].data.findings = fullData.findings;
                                 if (fullData.briefing_script) incidents[inc.id].data.briefing = fullData.briefing_script;
-                            } catch (e) {}
+                            } catch (e) { }
                         }
                         renderIncident(inc.id);
                     }
@@ -823,4 +1160,5 @@
         connectWS();
     </script>
 </body>
+
 </html>

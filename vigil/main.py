@@ -224,6 +224,7 @@ async def _run_investigation(incident_id: str):
         if audio_url:
             incident.briefing_audio_url = audio_url
             logger.info(f"🔊 [{incident_id}] Audio ready: {audio_url}")
+            await events.emit(incident_id, "audio_ready", {"audio_url": audio_url})
         else:
             logger.info(f"🔇 [{incident_id}] TTS skipped (no API key or generation failed)")
 

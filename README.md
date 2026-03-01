@@ -1,5 +1,6 @@
 <div align="center">
-  <img src="vigil/static/logo.png" width="120" alt="Vigil Logo">
+  <img width="1512" height="858" alt="Screenshot 2026-03-01 at 3 40 35 PM" src="https://github.com/user-attachments/assets/68543d59-5010-44c6-8e11-5c6f5de9e52c" />
+
   <h1>🛡️ Vigil</h1>
   <p><b>Autonomous AI Incident Response Agent</b></p>
   <p><i>An intelligent SRE agent that investigates production alerts, searches logs & commits, finds similar past incidents, and briefs the on-call engineer via voice call.</i></p>

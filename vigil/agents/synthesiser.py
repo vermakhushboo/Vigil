@@ -1,11 +1,13 @@
-"""Vigil — Synthesiser Agent.
+"""Vigil — Synthesiser Agent (via NVIDIA API).
 
 Takes the orchestrator's findings and generates a concise
 30-second voice briefing script for the on-call engineer.
+
+Uses NVIDIA's OpenAI-compatible API endpoint to access Mistral models.
 """
 import logging
 
-from mistralai import Mistral
+from openai import OpenAI
 
 from vigil.config import settings
 from vigil.models.incident import Incident
@@ -50,9 +52,12 @@ async def generate_briefing(incident: Incident) -> str:
     )
 
     try:
-        client = Mistral(api_key=settings.mistral_api_key)
-        response = client.chat.complete(
-            model="mistral-small-latest",
+        client = OpenAI(
+            base_url="https://integrate.api.nvidia.com/v1",
+            api_key=settings.mistral_api_key,
+        )
+        response = client.chat.completions.create(
+            model="mistralai/mistral-small-3.1-24b-instruct-2503",
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": context},

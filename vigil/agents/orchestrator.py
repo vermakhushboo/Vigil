@@ -1,13 +1,15 @@
-"""Vigil — Mistral Orchestrator Agent.
+"""Vigil — Mistral Orchestrator Agent (via NVIDIA API).
 
 Uses Mistral function calling to autonomously investigate incidents.
 The agent iteratively calls tools (logs, commits, runbooks, past incidents)
 until it has enough context to brief an engineer.
+
+Uses NVIDIA's OpenAI-compatible API endpoint to access Mistral models.
 """
 import json
 import logging
 
-from mistralai import Mistral
+from openai import OpenAI
 
 from vigil.config import settings
 from vigil.models.incident import Incident, IncidentFindings
@@ -152,7 +154,10 @@ async def investigate(incident: Incident) -> IncidentFindings:
             root_cause="Investigation failed: MISTRAL_API_KEY not configured"
         )
 
-    client = Mistral(api_key=settings.mistral_api_key)
+    client = OpenAI(
+        base_url="https://integrate.api.nvidia.com/v1",
+        api_key=settings.mistral_api_key,
+    )
 
     # Build initial message with incident context
     incident_context = (
@@ -181,8 +186,8 @@ async def investigate(incident: Incident) -> IncidentFindings:
         logger.info(f"🔄 Agent iteration {iteration + 1}/{MAX_ITERATIONS}")
 
         try:
-            response = client.chat.complete(
-                model="mistral-large-latest",
+            response = client.chat.completions.create(
+                model="mistralai/mistral-large-3-675b-instruct-2512",
                 messages=messages,
                 tools=TOOLS,
             )
@@ -261,13 +266,24 @@ async def investigate(incident: Incident) -> IncidentFindings:
     })
 
     try:
-        response = client.chat.complete(
-            model="mistral-large-latest",
+        response = client.chat.completions.create(
+            model="mistralai/mistral-large-3-675b-instruct-2512",
             messages=messages,
         )
         return _parse_findings(response.choices[0].message.content or "")
     except Exception:
         return IncidentFindings(root_cause="Investigation timed out after max iterations")
+
+
+def _to_str(value) -> str | None:
+    """Coerce a value to string — handles dicts/lists from LLM responses."""
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return value
+    if isinstance(value, (dict, list)):
+        return json.dumps(value, indent=2)
+    return str(value)
 
 
 def _parse_findings(text: str) -> IncidentFindings:
@@ -283,15 +299,15 @@ def _parse_findings(text: str) -> IncidentFindings:
             json_str = text[json_start:json_end]
             data = json.loads(json_str)
             return IncidentFindings(
-                root_cause=data.get("root_cause"),
-                started_at=data.get("started_at"),
-                last_commit=data.get("last_commit"),
-                runbook_match=data.get("runbook_match"),
-                past_similar=data.get("past_similar"),
-                is_recurring=data.get("is_recurring", False),
-                recurrence_count=data.get("recurrence_count", 0),
+                root_cause=_to_str(data.get("root_cause")),
+                started_at=_to_str(data.get("started_at")),
+                last_commit=_to_str(data.get("last_commit")),
+                runbook_match=_to_str(data.get("runbook_match")),
+                past_similar=_to_str(data.get("past_similar")),
+                is_recurring=bool(data.get("is_recurring", False)),
+                recurrence_count=int(data.get("recurrence_count", 0)),
             )
-    except (json.JSONDecodeError, KeyError) as e:
+    except (json.JSONDecodeError, KeyError, ValueError) as e:
         logger.warning(f"Could not parse JSON from agent response: {e}")
 
     # Fallback: use the full text as root cause

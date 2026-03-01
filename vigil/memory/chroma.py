@@ -6,6 +6,9 @@ redundant embedding model loads.
 """
 import os
 
+# Disable ChromaDB telemetry (avoids posthog version conflict errors)
+os.environ["ANONYMIZED_TELEMETRY"] = "False"
+
 import chromadb
 from chromadb.utils import embedding_functions
 

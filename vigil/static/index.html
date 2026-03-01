@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vigil — Incident Response Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg-primary: #0a0e1a;
+            --bg-secondary: #111827;
+            --bg-card: #1a2035;
+            --bg-card-hover: #1f2847;
+            --border: #2a3558;
+            --border-light: #374268;
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --accent: #6366f1;
+            --accent-glow: rgba(99, 102, 241, 0.3);
+            --critical: #ef4444;
+            --critical-bg: rgba(239, 68, 68, 0.1);
+            --warning: #f59e0b;
+            --warning-bg: rgba(245, 158, 11, 0.1);
+            --success: #10b981;
+            --success-bg: rgba(16, 185, 129, 0.1);
+            --info: #3b82f6;
+            --info-bg: rgba(59, 130, 246, 0.1);
+            --radius: 12px;
+            --radius-sm: 8px;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ─── Header ─── */
+        .header {
+            background: linear-gradient(135deg, var(--bg-secondary) 0%, #0f172a 100%);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(12px);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--accent), #8b5cf6);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            box-shadow: 0 0 20px var(--accent-glow);
+        }
+
+        .logo h1 {
+            font-size: 22px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #e2e8f0, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .logo .subtitle {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            font-weight: 500;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.disconnected { background: var(--critical); animation: none; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        /* ─── Main Layout ─── */
+        .main {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 24px 32px;
+        }
+
+        /* ─── Trigger Panel ─── */
+        .trigger-panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px 24px;
+            margin-bottom: 24px;
+        }
+
+        .trigger-panel h2 {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 14px;
+        }
+
+        .trigger-buttons {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .trigger-btn {
+            padding: 10px 20px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .trigger-btn:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--accent);
+            box-shadow: 0 0 12px var(--accent-glow);
+            transform: translateY(-1px);
+        }
+
+        .trigger-btn:active { transform: translateY(0); }
+        .trigger-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .trigger-btn .icon { font-size: 16px; }
+
+        /* ─── Incidents Grid ─── */
+        .section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .incident-count {
+            background: var(--accent);
+            color: white;
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+
+        .incidents-container {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+        }
+
+        .empty-state .icon { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
+        .empty-state p { font-size: 14px; }
+
+        /* ─── Incident Card ─── */
+        .incident-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            transition: all 0.3s;
+            animation: slideIn 0.4s ease-out;
+        }
+
+        .incident-card:hover { border-color: var(--border-light); }
+
+        .incident-card.severity-critical { border-left: 3px solid var(--critical); }
+        .incident-card.severity-warning { border-left: 3px solid var(--warning); }
+        .incident-card.severity-info { border-left: 3px solid var(--info); }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .incident-header {
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+        }
+
+        .incident-header:hover { background: var(--bg-card-hover); }
+
+        .incident-info { display: flex; align-items: center; gap: 14px; flex: 1; }
+
+        .severity-indicator {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 4px 10px;
+            border-radius: 6px;
+        }
+
+        .severity-critical { color: var(--critical); background: var(--critical-bg); }
+        .severity-warning { color: var(--warning); background: var(--warning-bg); }
+        .severity-info { color: var(--info); background: var(--info-bg); }
+
+        .incident-title {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .incident-meta {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .incident-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            font-weight: 500;
+            padding: 6px 12px;
+            border-radius: 6px;
+        }
+
+        .status-received { color: var(--text-secondary); background: rgba(148, 163, 184, 0.1); }
+        .status-investigating {
+            color: var(--warning);
+            background: var(--warning-bg);
+            animation: investigating-pulse 1.5s infinite;
+        }
+        .status-calling { color: var(--success); background: var(--success-bg); }
+        .status-resolved { color: var(--success); background: var(--success-bg); }
+
+        @keyframes investigating-pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        /* ─── Timeline ─── */
+        .incident-body {
+            display: none;
+            border-top: 1px solid var(--border);
+        }
+
+        .incident-card.expanded .incident-body { display: block; }
+
+        .timeline {
+            padding: 20px;
+        }
+
+        .timeline-item {
+            display: flex;
+            gap: 14px;
+            padding-bottom: 16px;
+            position: relative;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .timeline-item:not(:last-child)::before {
+            content: '';
+            position: absolute;
+            left: 15px;
+            top: 32px;
+            bottom: 0;
+            width: 2px;
+            background: var(--border);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateX(-8px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .timeline-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+            z-index: 1;
+        }
+
+        .timeline-icon.tool-call { background: var(--info-bg); border: 1px solid rgba(59, 130, 246, 0.3); }
+        .timeline-icon.tool-result { background: var(--success-bg); border: 1px solid rgba(16, 185, 129, 0.3); }
+        .timeline-icon.status { background: var(--warning-bg); border: 1px solid rgba(245, 158, 11, 0.3); }
+        .timeline-icon.findings { background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.3); }
+        .timeline-icon.briefing { background: var(--success-bg); border: 1px solid rgba(16, 185, 129, 0.3); }
+        .timeline-icon.loading {
+            background: var(--warning-bg);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .timeline-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .timeline-label {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .timeline-detail {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 10px 14px;
+            max-height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+            margin-top: 6px;
+        }
+
+        .timeline-time {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        /* ─── Briefing Card ─── */
+        .briefing-card {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.05), rgba(99, 102, 241, 0.05));
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            border-radius: var(--radius-sm);
+            padding: 16px 20px;
+            margin: 0 20px 20px;
+        }
+
+        .briefing-card h4 {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--success);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .briefing-text {
+            font-size: 14px;
+            color: var(--text-primary);
+            line-height: 1.7;
+            font-style: italic;
+        }
+
+        /* ─── Findings Card ─── */
+        .findings-card {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.05), rgba(99, 102, 241, 0.05));
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            border-radius: var(--radius-sm);
+            padding: 16px 20px;
+            margin: 0 20px 20px;
+        }
+
+        .findings-card h4 {
+            font-size: 12px;
+            font-weight: 600;
+            color: #8b5cf6;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+        }
+
+        .findings-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .finding-item {
+            padding: 8px 12px;
+            background: var(--bg-secondary);
+            border-radius: 6px;
+            border: 1px solid var(--border);
+        }
+
+        .finding-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .finding-value {
+            font-size: 13px;
+            color: var(--text-primary);
+            word-break: break-word;
+        }
+
+        .finding-item.full-width { grid-column: 1 / -1; }
+
+        /* ─── Responsive ─── */
+        @media (max-width: 768px) {
+            .header { padding: 12px 16px; }
+            .main { padding: 16px; }
+            .trigger-buttons { flex-direction: column; }
+            .findings-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="logo">
+            <div class="logo-icon">🛡️</div>
+            <div>
+                <h1>Vigil</h1>
+                <div class="subtitle">Autonomous Incident Response</div>
+            </div>
+        </div>
+        <div class="status-badge">
+            <div class="status-dot" id="ws-dot"></div>
+            <span id="ws-status">Connecting...</span>
+        </div>
+    </header>
+
+    <main class="main">
+        <!-- Trigger Panel -->
+        <div class="trigger-panel">
+            <h2>⚡ Trigger Test Incident</h2>
+            <div class="trigger-buttons">
+                <button class="trigger-btn" onclick="triggerIncident('5xx')" id="btn-5xx">
+                    <span class="icon">🔴</span> 5xx Error Spike
+                </button>
+                <button class="trigger-btn" onclick="triggerIncident('db')" id="btn-db">
+                    <span class="icon">🗄️</span> Database Down
+                </button>
+                <button class="trigger-btn" onclick="triggerIncident('cpu')" id="btn-cpu">
+                    <span class="icon">🔥</span> CPU Spike
+                </button>
+            </div>
+        </div>
+
+        <!-- Incidents List -->
+        <div class="section-title">
+            📋 Incidents <span class="incident-count" id="incident-count">0</span>
+        </div>
+        <div class="incidents-container" id="incidents">
+            <div class="empty-state" id="empty-state">
+                <div class="icon">🛡️</div>
+                <p>No incidents yet. Trigger a test incident or wait for an alert.</p>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // ═══════════════════════════════════════
+        // STATE
+        // ═══════════════════════════════════════
+        const incidents = {};  // id → {data, timeline[]}
+        let ws = null;
+
+        // ═══════════════════════════════════════
+        // TRIGGER INCIDENTS
+        // ═══════════════════════════════════════
+        const SCENARIOS = {
+            '5xx': { title: 'High 5xx error rate on flask-app', severity: 'critical', service: 'flask-app' },
+            'db':  { title: 'PostgreSQL database unreachable', severity: 'critical', service: 'postgres' },
+            'cpu': { title: 'CPU spike causing high latency on flask-app', severity: 'warning', service: 'flask-app' },
+        };
+
+        async function triggerIncident(type) {
+            const btn = document.getElementById(`btn-${type}`);
+            btn.disabled = true;
+            btn.textContent = '⏳ Triggering...';
+
+            try {
+                const resp = await fetch('/test/trigger', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(SCENARIOS[type]),
+                });
+                const data = await resp.json();
+                console.log('Triggered:', data);
+            } catch (e) {
+                console.error('Trigger failed:', e);
+            } finally {
+                setTimeout(() => {
+                    btn.disabled = false;
+                    const labels = { '5xx': '🔴 5xx Error Spike', 'db': '🗄️ Database Down', 'cpu': '🔥 CPU Spike' };
+                    btn.innerHTML = `<span class="icon">${labels[type].split(' ')[0]}</span> ${labels[type].substring(labels[type].indexOf(' ') + 1)}`;
+                }, 2000);
+            }
+        }
+
+        // ═══════════════════════════════════════
+        // WEBSOCKET
+        // ═══════════════════════════════════════
+        function connectWS() {
+            const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
+            ws = new WebSocket(`${protocol}://${location.host}/ws`);
+
+            ws.onopen = () => {
+                document.getElementById('ws-dot').classList.remove('disconnected');
+                document.getElementById('ws-status').textContent = 'Live';
+            };
+
+            ws.onclose = () => {
+                document.getElementById('ws-dot').classList.add('disconnected');
+                document.getElementById('ws-status').textContent = 'Disconnected';
+                setTimeout(connectWS, 3000);
+            };
+
+            ws.onmessage = (e) => {
+                const event = JSON.parse(e.data);
+                handleEvent(event);
+            };
+        }
+
+        function handleEvent(event) {
+            const { incident_id, type, data, timestamp } = event;
+
+            switch (type) {
+                case 'incident_created':
+                    incidents[incident_id] = {
+                        data: data,
+                        timeline: [{ type: 'status', icon: '🚨', label: 'Alert Received', time: timestamp }],
+                    };
+                    renderIncident(incident_id);
+                    break;
+
+                case 'status_changed':
+                    if (!incidents[incident_id]) break;
+                    incidents[incident_id].data.status = data.status;
+                    const statusLabels = {
+                        'investigating': '🔍 Investigation Started',
+                        'calling': '📞 Ready to Call Engineer',
+                        'resolved': '✅ Resolved',
+                    };
+                    if (statusLabels[data.status]) {
+                        incidents[incident_id].timeline.push({
+                            type: 'status', icon: statusLabels[data.status].split(' ')[0],
+                            label: statusLabels[data.status].substring(2), time: timestamp,
+                        });
+                    }
+                    renderIncident(incident_id);
+                    break;
+
+                case 'tool_called':
+                    if (!incidents[incident_id]) break;
+                    const toolIcons = { search_logs: '📋', get_recent_commits: '🔀', search_runbooks: '📖', search_past_incidents: '🔎' };
+                    const toolLabels = { search_logs: 'Searching Logs', get_recent_commits: 'Checking Recent Commits', search_runbooks: 'Searching Runbooks', search_past_incidents: 'Searching Past Incidents' };
+                    incidents[incident_id].timeline.push({
+                        type: 'tool-call',
+                        icon: toolIcons[data.tool] || '🔧',
+                        label: `${toolLabels[data.tool] || data.tool}`,
+                        detail: data.args,
+                        time: timestamp,
+                    });
+                    // Add a loading indicator
+                    incidents[incident_id]._loading = true;
+                    renderIncident(incident_id);
+                    break;
+
+                case 'tool_result':
+                    if (!incidents[incident_id]) break;
+                    incidents[incident_id]._loading = false;
+                    incidents[incident_id].timeline.push({
+                        type: 'tool-result',
+                        icon: '✅',
+                        label: `Result: ${data.tool}`,
+                        detail: data.result,
+                        time: timestamp,
+                    });
+                    renderIncident(incident_id);
+                    break;
+
+                case 'findings_ready':
+                    if (!incidents[incident_id]) break;
+                    incidents[incident_id].data.findings = data;
+                    incidents[incident_id].timeline.push({
+                        type: 'findings', icon: '🧠',
+                        label: 'Investigation Complete — Root Cause Identified', time: timestamp,
+                    });
+                    renderIncident(incident_id);
+                    break;
+
+                case 'briefing_ready':
+                    if (!incidents[incident_id]) break;
+                    incidents[incident_id].data.briefing = data.briefing;
+                    incidents[incident_id].timeline.push({
+                        type: 'briefing', icon: '🎤',
+                        label: 'Voice Briefing Generated', time: timestamp,
+                    });
+                    renderIncident(incident_id);
+                    break;
+            }
+
+            updateCount();
+        }
+
+        // ═══════════════════════════════════════
+        // RENDER
+        // ═══════════════════════════════════════
+        function updateCount() {
+            document.getElementById('incident-count').textContent = Object.keys(incidents).length;
+            document.getElementById('empty-state').style.display = Object.keys(incidents).length ? 'none' : 'block';
+        }
+
+        function formatTime(ts) {
+            const d = new Date(ts);
+            return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }
+
+        function renderIncident(id) {
+            const inc = incidents[id];
+            if (!inc) return;
+
+            let card = document.getElementById(`incident-${id}`);
+            const isNew = !card;
+            const wasExpanded = card?.classList.contains('expanded');
+
+            if (isNew) {
+                card = document.createElement('div');
+                card.id = `incident-${id}`;
+                card.className = `incident-card severity-${inc.data.severity || 'info'} expanded`;
+                const container = document.getElementById('incidents');
+                container.insertBefore(card, container.firstChild);
+            }
+
+            const status = inc.data.status || 'received';
+
+            card.innerHTML = `
+                <div class="incident-header" onclick="toggleCard('${id}')">
+                    <div class="incident-info">
+                        <span class="severity-indicator severity-${inc.data.severity || 'info'}">${(inc.data.severity || 'info').toUpperCase()}</span>
+                        <div>
+                            <div class="incident-title">${inc.data.title || 'Incident ' + id}</div>
+                            <div class="incident-meta">ID: ${id} · ${inc.data.service || 'unknown'} · ${formatTime(inc.timeline[0]?.time || new Date().toISOString())}</div>
+                        </div>
+                    </div>
+                    <div class="incident-status status-${status}">
+                        ${status === 'investigating' ? '⏳' : status === 'calling' ? '✅' : status === 'resolved' ? '✅' : '📨'}
+                        ${status.charAt(0).toUpperCase() + status.slice(1)}
+                    </div>
+                </div>
+                <div class="incident-body">
+                    <div class="timeline">
+                        ${inc.timeline.map(item => renderTimelineItem(item)).join('')}
+                        ${inc._loading ? renderTimelineItem({ type: 'loading', icon: '⏳', label: 'Agent thinking...', time: new Date().toISOString() }) : ''}
+                    </div>
+                    ${inc.data.findings ? renderFindings(inc.data.findings) : ''}
+                    ${inc.data.briefing ? renderBriefing(inc.data.briefing) : ''}
+                </div>
+            `;
+
+            if (!isNew) {
+                card.classList.toggle('expanded', wasExpanded);
+            }
+        }
+
+        function renderTimelineItem(item) {
+            return `
+                <div class="timeline-item">
+                    <div class="timeline-icon ${item.type === 'loading' ? 'loading' : item.type}">${item.icon}</div>
+                    <div class="timeline-content">
+                        <div class="timeline-label">${item.label}</div>
+                        ${item.detail ? `<div class="timeline-detail">${escapeHtml(item.detail)}</div>` : ''}
+                        <div class="timeline-time">${formatTime(item.time)}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderFindings(f) {
+            return `
+                <div class="findings-card">
+                    <h4>🧠 Investigation Findings</h4>
+                    <div class="findings-grid">
+                        <div class="finding-item full-width">
+                            <div class="finding-label">Root Cause</div>
+                            <div class="finding-value">${escapeHtml(f.root_cause || 'Unknown')}</div>
+                        </div>
+                        <div class="finding-item">
+                            <div class="finding-label">Started At</div>
+                            <div class="finding-value">${escapeHtml(f.started_at || 'Unknown')}</div>
+                        </div>
+                        <div class="finding-item">
+                            <div class="finding-label">Suspicious Commit</div>
+                            <div class="finding-value">${escapeHtml(f.last_commit || 'None')}</div>
+                        </div>
+                        ${f.runbook_match ? `<div class="finding-item full-width">
+                            <div class="finding-label">Runbook Match</div>
+                            <div class="finding-value">${escapeHtml(f.runbook_match)}</div>
+                        </div>` : ''}
+                        ${f.is_recurring ? `<div class="finding-item">
+                            <div class="finding-label">Recurring</div>
+                            <div class="finding-value">Yes — seen ${f.recurrence_count || 0} times before</div>
+                        </div>` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderBriefing(text) {
+            return `
+                <div class="briefing-card">
+                    <h4>🎤 Voice Briefing Script</h4>
+                    <div class="briefing-text">"${escapeHtml(text)}"</div>
+                </div>
+            `;
+        }
+
+        function toggleCard(id) {
+            const card = document.getElementById(`incident-${id}`);
+            if (card) card.classList.toggle('expanded');
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = String(text);
+            return div.innerHTML;
+        }
+
+        // ═══════════════════════════════════════
+        // BOOT: load existing incidents + connect WS
+        // ═══════════════════════════════════════
+        async function loadExisting() {
+            try {
+                const resp = await fetch('/incidents');
+                const list = await resp.json();
+                for (const inc of list) {
+                    if (!incidents[inc.id]) {
+                        incidents[inc.id] = {
+                            data: inc,
+                            timeline: [{ type: 'status', icon: '🚨', label: 'Alert Received', time: inc.created_at }],
+                        };
+                        if (inc.status === 'investigating' || inc.status === 'calling' || inc.status === 'resolved') {
+                            incidents[inc.id].data.status = inc.status;
+                        }
+                        if (inc.has_findings) {
+                            // Fetch full incident for findings
+                            try {
+                                const full = await fetch(`/incident/${inc.id}`);
+                                const fullData = await full.json();
+                                if (fullData.findings) incidents[inc.id].data.findings = fullData.findings;
+                                if (fullData.briefing_script) incidents[inc.id].data.briefing = fullData.briefing_script;
+                            } catch (e) {}
+                        }
+                        renderIncident(inc.id);
+                    }
+                }
+                updateCount();
+            } catch (e) {
+                console.error('Failed to load existing incidents:', e);
+            }
+        }
+
+        loadExisting();
+        connectWS();
+    </script>
+</body>
+</html>

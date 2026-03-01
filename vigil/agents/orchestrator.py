@@ -8,6 +8,7 @@ Uses NVIDIA's OpenAI-compatible API endpoint to access Mistral models.
 """
 import json
 import logging
+from typing import Callable, Awaitable, Optional
 
 from openai import OpenAI
 
@@ -134,20 +135,28 @@ TOOL_FUNCTIONS = {
 MAX_ITERATIONS = 8  # Safety limit on agent loops
 
 
-async def investigate(incident: Incident) -> IncidentFindings:
+# Type alias for the event callback
+EventCallback = Optional[Callable[[str, dict], Awaitable[None]]]
+
+
+async def investigate(incident: Incident, on_event: EventCallback = None) -> IncidentFindings:
     """
     Run the Mistral orchestrator agent to investigate an incident.
 
-    The agent loop:
-    1. Send incident details + system prompt to Mistral with tools
-    2. Mistral returns tool_use → call the tool, get result
-    3. Append tool result to messages, call Mistral again
-    4. Repeat until Mistral returns text (investigation complete)
-    5. Parse findings from the response
+    Args:
+        incident: The incident to investigate.
+        on_event: Optional async callback(event_type, data) for real-time UI updates.
 
     Returns:
         IncidentFindings with the investigation results.
     """
+    async def _emit(event_type: str, data: dict = None):
+        if on_event:
+            try:
+                await on_event(event_type, data or {})
+            except Exception:
+                pass  # Never let UI events break investigation
+
     if not settings.mistral_api_key:
         logger.error("❌ MISTRAL_API_KEY not set — cannot investigate")
         return IncidentFindings(
@@ -220,6 +229,7 @@ async def investigate(incident: Incident) -> IncidentFindings:
                 func_args_str = tool_call.function.arguments
 
                 logger.info(f"🔧 Agent calling tool: {func_name}({func_args_str})")
+                await _emit("tool_called", {"tool": func_name, "args": func_args_str, "iteration": iteration + 1})
 
                 # Parse arguments
                 try:
@@ -239,6 +249,7 @@ async def investigate(incident: Incident) -> IncidentFindings:
                     result = f"Unknown tool: {func_name}"
 
                 logger.info(f"📎 Tool result ({func_name}): {str(result)[:200]}...")
+                await _emit("tool_result", {"tool": func_name, "result": str(result)[:500]})
 
                 # Append tool result to messages
                 messages.append({

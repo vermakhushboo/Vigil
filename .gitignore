@@ -40,3 +40,4 @@ static/audio/*.wav
 
 # Logs
 *.log
+.venv/

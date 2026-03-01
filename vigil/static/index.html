@@ -463,6 +463,11 @@
             border: 1px solid rgba(16, 185, 129, 0.3);
         }
 
+        .timeline-icon.call {
+            background: rgba(236, 72, 153, 0.1);
+            border: 1px solid rgba(236, 72, 153, 0.3);
+        }
+
         .timeline-icon.loading {
             background: var(--warning-bg);
             border: 1px solid rgba(245, 158, 11, 0.3);
@@ -909,6 +914,17 @@
                     incidents[incident_id].timeline.push({
                         type: 'briefing', icon: '🎤',
                         label: 'Voice Briefing Generated', time: timestamp,
+                    });
+                    renderIncident(incident_id);
+                    break;
+
+                case 'call_initiated':
+                    if (!incidents[incident_id]) break;
+                    incidents[incident_id].timeline.push({
+                        type: 'call', icon: '📱',
+                        label: 'Outbound Call Initiated',
+                        detail: `Calling on-call engineer at ${data.phone_number}`,
+                        time: timestamp,
                     });
                     renderIncident(incident_id);
                     break;

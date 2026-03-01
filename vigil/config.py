@@ -29,6 +29,11 @@ class Settings(BaseSettings):
     twilio_phone_number: str = ""
     oncall_phone_number: str = ""
 
+    # Vapi (Voice Calling)
+    vapi_api_key: str = ""
+    vapi_assistant_id: str = "695c69a2-d6d8-4822-80a8-9b737381d580"
+    vapi_phone_number_id: str = ""
+
     # GitHub
     github_token: str = ""
     github_repo: str = ""

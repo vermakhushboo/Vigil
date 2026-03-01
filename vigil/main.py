@@ -23,6 +23,7 @@ from vigil.agents.orchestrator import investigate
 from vigil.agents.synthesiser import generate_briefing
 from vigil.tools.runbook_search import load_runbooks
 from vigil.voice.tts import generate_audio
+from vigil.voice.vapi import trigger_outbound_call
 from vigil.memory.seed import seed_past_incidents
 from vigil import events
 
@@ -232,6 +233,11 @@ async def _run_investigation(incident_id: str):
         incident.status = IncidentStatus.CALLING
         await events.emit(incident_id, "status_changed", {"status": "calling"})
         logger.info(f"📞 [{incident_id}] Investigation complete. Ready to call on-call engineer.")
+
+        # Step 5: Trigger Vapi Phone Call
+        call_success = await trigger_outbound_call(incident)
+        if call_success:
+            await events.emit(incident_id, "call_initiated", {"phone_number": settings.oncall_phone_number})
 
     except Exception as e:
         logger.error(f"❌ [{incident_id}] Investigation pipeline failed: {e}")

@@ -10,9 +10,9 @@ import json
 import logging
 from typing import Callable, Awaitable, Optional
 
-from openai import OpenAI
+from openai import AsyncOpenAI
 
-from vigil.config import settings
+from vigil.config import settings, get_async_llm_client, MODEL_LARGE
 from vigil.models.incident import Incident, IncidentFindings
 from vigil.tools.log_analyser import search_logs
 from vigil.tools.github_finder import get_recent_commits
@@ -163,10 +163,7 @@ async def investigate(incident: Incident, on_event: EventCallback = None) -> Inc
             root_cause="Investigation failed: MISTRAL_API_KEY not configured"
         )
 
-    client = OpenAI(
-        base_url="https://integrate.api.nvidia.com/v1",
-        api_key=settings.mistral_api_key,
-    )
+    client = get_async_llm_client()
 
     # Build initial message with incident context
     incident_context = (
@@ -195,8 +192,8 @@ async def investigate(incident: Incident, on_event: EventCallback = None) -> Inc
         logger.info(f"🔄 Agent iteration {iteration + 1}/{MAX_ITERATIONS}")
 
         try:
-            response = client.chat.completions.create(
-                model="mistralai/mistral-large-3-675b-instruct-2512",
+            response = await client.chat.completions.create(
+                model=MODEL_LARGE,
                 messages=messages,
                 tools=TOOLS,
             )
@@ -277,8 +274,8 @@ async def investigate(incident: Incident, on_event: EventCallback = None) -> Inc
     })
 
     try:
-        response = client.chat.completions.create(
-            model="mistralai/mistral-large-3-675b-instruct-2512",
+        response = await client.chat.completions.create(
+            model=MODEL_LARGE,
             messages=messages,
         )
         return _parse_findings(response.choices[0].message.content or "")

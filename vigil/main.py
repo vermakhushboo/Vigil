@@ -17,11 +17,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from vigil.config import settings
+from vigil.config import settings, get_async_llm_client, MODEL_SMALL, AUDIO_DIR
 from vigil.models.incident import Incident, IncidentStatus, IncidentFindings
 from vigil.agents.orchestrator import investigate
 from vigil.agents.synthesiser import generate_briefing
 from vigil.tools.runbook_search import load_runbooks
+from vigil.voice.tts import generate_audio
 from vigil.memory.seed import seed_past_incidents
 from vigil import events
 
@@ -67,6 +68,10 @@ app = FastAPI(
     version="0.3.0",
     lifespan=lifespan,
 )
+
+# Mount static files for serving TTS audio
+AUDIO_DIR.mkdir(parents=True, exist_ok=True)  # ensure dir exists before mount
+app.mount("/static", StaticFiles(directory=str(AUDIO_DIR.parent)), name="static")
 
 app.add_middleware(
     CORSMiddleware,
@@ -214,7 +219,15 @@ async def _run_investigation(incident_id: str):
 
         await events.emit(incident_id, "briefing_ready", {"briefing": briefing})
 
-        # Step 3: Ready to call
+        # Step 3: Convert briefing to audio (ElevenLabs TTS)
+        audio_url = await generate_audio(incident_id, briefing)
+        if audio_url:
+            incident.briefing_audio_url = audio_url
+            logger.info(f"🔊 [{incident_id}] Audio ready: {audio_url}")
+        else:
+            logger.info(f"🔇 [{incident_id}] TTS skipped (no API key or generation failed)")
+
+        # Step 4: Ready to call
         incident.status = IncidentStatus.CALLING
         await events.emit(incident_id, "status_changed", {"status": "calling"})
         logger.info(f"📞 [{incident_id}] Investigation complete. Ready to call on-call engineer.")
@@ -278,3 +291,96 @@ async def test_trigger(request: Request):
     asyncio.create_task(_run_investigation(incident_id))
 
     return {"status": "triggered", "incident_id": incident_id}
+
+
+# ─── Q&A: Ask follow-up questions about an incident ───
+@app.post("/incident/{incident_id}/ask")
+async def ask_about_incident(incident_id: str, request: Request):
+    """
+    Ask a follow-up question about an incident in plain English.
+    The agent answers using the full investigation context.
+    """
+    incident = incidents.get(incident_id)
+    if not incident:
+        return JSONResponse(status_code=404, content={"error": "Incident not found"})
+
+    body = await request.json()
+    question = body.get("question", "")
+    if not question:
+        return JSONResponse(status_code=400, content={"error": "No question provided"})
+
+    if not settings.mistral_api_key:
+        return JSONResponse(status_code=503, content={"error": "MISTRAL_API_KEY not configured"})
+
+    # Build context from investigation
+    findings = incident.findings
+    context = (
+        f"INCIDENT DETAILS:\n"
+        f"  Title: {incident.title}\n"
+        f"  Severity: {incident.severity}\n"
+        f"  Service: {incident.service}\n"
+        f"  Status: {incident.status.value}\n"
+        f"  Created: {incident.created_at.isoformat()}\n\n"
+    )
+
+    if findings:
+        context += (
+            f"INVESTIGATION FINDINGS:\n"
+            f"  Root Cause: {findings.root_cause or 'Not determined'}\n"
+            f"  Started At: {findings.started_at or 'Unknown'}\n"
+            f"  Suspicious Commit: {findings.last_commit or 'None found'}\n"
+            f"  Runbook Match: {findings.runbook_match or 'No matching runbook'}\n"
+            f"  Similar Past Incidents: {findings.past_similar or 'None found'}\n"
+            f"  Recurring: {'Yes (' + str(findings.recurrence_count) + ' times)' if findings.is_recurring else 'No'}\n\n"
+        )
+
+    if incident.briefing_script:
+        context += f"BRIEFING:\n  {incident.briefing_script}\n\n"
+
+    # Build conversation messages
+    system_msg = (
+        "You are Vigil, an AI incident response agent. You have just finished investigating "
+        "a production incident. Answer the on-call engineer's questions using the investigation "
+        "context below. Be direct, specific, and actionable. If you don't know something, say so.\n\n"
+        f"{context}"
+    )
+
+    messages = [{"role": "system", "content": system_msg}]
+
+    # Include last 10 Q&A exchanges (bounded to prevent context window overflow)
+    history = incident.call_transcript[-10:]
+    for entry in history:
+        messages.append({"role": "user", "content": entry.get("question", "")})
+        messages.append({"role": "assistant", "content": entry.get("answer", "")})
+
+    messages.append({"role": "user", "content": question})
+
+    try:
+        client = get_async_llm_client()
+
+        response = await client.chat.completions.create(
+            model=MODEL_SMALL,
+            messages=messages,
+        )
+
+        answer = response.choices[0].message.content
+        logger.info(f"💬 [{incident_id}] Q: {question[:60]}... A: {answer[:60]}...")
+
+        # Save to transcript for conversation continuity
+        incident.call_transcript.append({
+            "question": question,
+            "answer": answer,
+            "timestamp": datetime.utcnow().isoformat(),
+        })
+
+        return {
+            "incident_id": incident_id,
+            "question": question,
+            "answer": answer,
+            "conversation_length": len(incident.call_transcript),
+        }
+
+    except Exception as e:
+        logger.error(f"❌ [{incident_id}] Q&A failed: {e}")
+        return JSONResponse(status_code=500, content={"error": f"Q&A failed: {e}"})
+

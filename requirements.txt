@@ -7,6 +7,7 @@ httpx==0.28.1
 
 # Phase 2 — AI Agent (via NVIDIA API, OpenAI-compatible)
 openai>=1.0.0
+elevenlabs>=1.0.0
 elasticsearch[async]==8.13.0
 chromadb==0.5.23
 sentence-transformers==3.4.1

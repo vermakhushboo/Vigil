@@ -7,9 +7,9 @@ Uses NVIDIA's OpenAI-compatible API endpoint to access Mistral models.
 """
 import logging
 
-from openai import OpenAI
+from openai import AsyncOpenAI
 
-from vigil.config import settings
+from vigil.config import settings, get_async_llm_client, MODEL_SMALL
 from vigil.models.incident import Incident
 
 logger = logging.getLogger("vigil.agents.synthesiser")
@@ -52,12 +52,9 @@ async def generate_briefing(incident: Incident) -> str:
     )
 
     try:
-        client = OpenAI(
-            base_url="https://integrate.api.nvidia.com/v1",
-            api_key=settings.mistral_api_key,
-        )
-        response = client.chat.completions.create(
-            model="mistralai/mistral-small-3.1-24b-instruct-2503",
+        client = get_async_llm_client()
+        response = await client.chat.completions.create(
+            model=MODEL_SMALL,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": context},

@@ -33,6 +33,7 @@ class Incident(BaseModel):
     status: IncidentStatus = IncidentStatus.RECEIVED
     findings: Optional[IncidentFindings] = None
     briefing_script: Optional[str] = None
+    briefing_audio_url: Optional[str] = None
     call_transcript: List[dict] = Field(default_factory=list)
     resolution: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)

@@ -1,32 +1,13 @@
 """Vigil — Store resolved incidents in ChromaDB."""
 import logging
 
-import chromadb
-from chromadb.utils import embedding_functions
+from vigil.memory.chroma import get_collection
 
 logger = logging.getLogger("vigil.memory.store")
 
-CHROMA_DIR = "./chroma_db"
-
-_chroma_client = None
-_collection = None
-
 
 def _get_collection():
-    """Get or initialize the past_incidents collection."""
-    global _chroma_client, _collection
-    if _collection is not None:
-        return _collection
-
-    _chroma_client = chromadb.PersistentClient(path=CHROMA_DIR)
-    ef = embedding_functions.SentenceTransformerEmbeddingFunction(
-        model_name="all-MiniLM-L6-v2"
-    )
-    _collection = _chroma_client.get_or_create_collection(
-        name="past_incidents",
-        embedding_function=ef,
-    )
-    return _collection
+    return get_collection("past_incidents")
 
 
 def store_incident(incident) -> None:

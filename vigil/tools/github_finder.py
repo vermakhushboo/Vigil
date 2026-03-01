@@ -8,50 +8,48 @@ from datetime import datetime, timedelta
 
 logger = logging.getLogger("vigil.tools.github_finder")
 
-# ─── Seeded commit history (realistic commits for demo) ───
-# These are designed to correlate with our chaos scenarios
-# so the agent can find a "suspicious" recent commit.
-SEEDED_COMMITS = [
+# ─── Seeded commit templates (timestamps are computed at call time) ───
+_COMMIT_TEMPLATES = [
     {
         "sha": "a1b2c3d",
         "message": "fix: update error handler middleware to catch unhandled rejections",
         "author": "sarah.chen",
-        "date": (datetime.utcnow() - timedelta(minutes=12)).isoformat() + "Z",
+        "minutes_ago": 12,
         "files_changed": ["app/middleware/error_handler.py", "app/routes/api.py"],
     },
     {
         "sha": "e4f5g6h",
         "message": "refactor: optimize DB connection pool config and timeout settings",
         "author": "james.wilson",
-        "date": (datetime.utcnow() - timedelta(minutes=25)).isoformat() + "Z",
+        "minutes_ago": 25,
         "files_changed": ["config/database.py", "docker-compose.yml"],
     },
     {
         "sha": "i7j8k9l",
         "message": "feat: add request validation layer with schema enforcement",
         "author": "priya.patel",
-        "date": (datetime.utcnow() - timedelta(minutes=45)).isoformat() + "Z",
+        "minutes_ago": 45,
         "files_changed": ["app/validation/schemas.py", "app/middleware/validator.py"],
     },
     {
         "sha": "m0n1o2p",
         "message": "chore: update nginx config and adjust proxy timeout values",
         "author": "alex.kumar",
-        "date": (datetime.utcnow() - timedelta(hours=2)).isoformat() + "Z",
+        "minutes_ago": 120,
         "files_changed": ["infra/nginx/nginx.conf"],
     },
     {
         "sha": "q3r4s5t",
         "message": "fix: patch memory leak in background task scheduler",
         "author": "sarah.chen",
-        "date": (datetime.utcnow() - timedelta(hours=5)).isoformat() + "Z",
+        "minutes_ago": 300,
         "files_changed": ["app/tasks/scheduler.py", "app/tasks/worker.py"],
     },
     {
         "sha": "u6v7w8x",
         "message": "feat: implement rate limiting on public API endpoints",
         "author": "james.wilson",
-        "date": (datetime.utcnow() - timedelta(hours=8)).isoformat() + "Z",
+        "minutes_ago": 480,
         "files_changed": ["app/middleware/rate_limiter.py", "config/limits.py"],
     },
 ]
@@ -69,17 +67,19 @@ def get_recent_commits(limit: int = 5) -> str:
     """
     logger.info(f"📋 Fetching last {limit} commits")
 
-    commits = SEEDED_COMMITS[:limit]
+    now = datetime.utcnow()
+    commits = _COMMIT_TEMPLATES[:limit]
 
     if not commits:
         return "No recent commits found."
 
     formatted = f"Last {len(commits)} commits:\n\n"
     for c in commits:
+        date = (now - timedelta(minutes=c["minutes_ago"])).isoformat() + "Z"
         files = ", ".join(c["files_changed"])
         formatted += (
             f"• [{c['sha']}] {c['message']}\n"
-            f"  Author: {c['author']} | Date: {c['date']}\n"
+            f"  Author: {c['author']} | Date: {date}\n"
             f"  Files: {files}\n\n"
         )
 

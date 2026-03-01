@@ -6,7 +6,6 @@ until it has enough context to brief an engineer.
 """
 import json
 import logging
-from typing import Optional
 
 from mistralai import Mistral
 
@@ -196,8 +195,20 @@ async def investigate(incident: Incident) -> IncidentFindings:
 
         # Case 1: Mistral wants to call tools
         if message.tool_calls:
-            # Add the assistant message (with tool calls) to history
-            messages.append(message)
+            # Serialize assistant message to dict for safe re-submission
+            assistant_msg = {"role": "assistant", "content": message.content or ""}
+            assistant_msg["tool_calls"] = [
+                {
+                    "id": tc.id,
+                    "type": "function",
+                    "function": {
+                        "name": tc.function.name,
+                        "arguments": tc.function.arguments if isinstance(tc.function.arguments, str) else json.dumps(tc.function.arguments),
+                    },
+                }
+                for tc in message.tool_calls
+            ]
+            messages.append(assistant_msg)
 
             for tool_call in message.tool_calls:
                 func_name = tool_call.function.name
@@ -222,7 +233,7 @@ async def investigate(incident: Incident) -> IncidentFindings:
                 else:
                     result = f"Unknown tool: {func_name}"
 
-                logger.info(f"📎 Tool result ({func_name}): {result[:200]}...")
+                logger.info(f"📎 Tool result ({func_name}): {str(result)[:200]}...")
 
                 # Append tool result to messages
                 messages.append({
@@ -261,7 +272,7 @@ async def investigate(incident: Incident) -> IncidentFindings:
 
 def _parse_findings(text: str) -> IncidentFindings:
     """Parse the agent's text response into IncidentFindings."""
-    logger.info(f"📝 Parsing findings from agent response")
+    logger.info("📝 Parsing findings from agent response")
 
     # Try to extract JSON from the response
     try:

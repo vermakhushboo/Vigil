@@ -15,8 +15,13 @@ logger = logging.getLogger("vigil.tools.log_analyser")
 
 def _parse_time_range(time_range: str) -> datetime:
     """Convert a time range string like '5m', '15m', '1h' to a datetime."""
-    unit = time_range[-1]
-    value = int(time_range[:-1])
+    try:
+        unit = time_range[-1]
+        value = int(time_range[:-1])
+    except (ValueError, IndexError):
+        logger.warning(f"Invalid time_range '{time_range}', defaulting to 10m")
+        return datetime.utcnow() - timedelta(minutes=10)
+
     if unit == "m":
         return datetime.utcnow() - timedelta(minutes=value)
     elif unit == "h":
@@ -48,8 +53,9 @@ def search_logs(query: str, time_range: str = "10m") -> str:
 
         since = _parse_time_range(time_range)
 
-        body = {
-            "query": {
+        result = es.search(
+            index="app-logs-*",
+            query={
                 "bool": {
                     "must": [
                         {
@@ -73,11 +79,9 @@ def search_logs(query: str, time_range: str = "10m") -> str:
                     ],
                 }
             },
-            "sort": [{"@timestamp": {"order": "desc"}}],
-            "size": 20,
-        }
-
-        result = es.search(index="app-logs-*", body=body)
+            sort=[{"@timestamp": {"order": "desc"}}],
+            size=20,
+        )
         hits = result.get("hits", {}).get("hits", [])
 
         if not hits:

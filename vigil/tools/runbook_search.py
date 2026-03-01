@@ -7,41 +7,19 @@ import logging
 import os
 import glob
 
-import chromadb
-from chromadb.utils import embedding_functions
-
-from vigil.config import settings
+from vigil.memory.chroma import get_collection
 
 logger = logging.getLogger("vigil.tools.runbook_search")
 
-# ─── ChromaDB client (persistent) ───
-_chroma_client = None
-_collection = None
-
 RUNBOOKS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "runbooks")
-CHROMA_DIR = os.environ.get("CHROMA_PERSIST_DIR", "./chroma_db")
 
 
 def _get_collection():
-    """Get or initialize the runbooks ChromaDB collection."""
-    global _chroma_client, _collection
-
-    if _collection is not None:
-        return _collection
-
-    _chroma_client = chromadb.PersistentClient(path=CHROMA_DIR)
-
-    ef = embedding_functions.SentenceTransformerEmbeddingFunction(
-        model_name="all-MiniLM-L6-v2"
-    )
-
-    _collection = _chroma_client.get_or_create_collection(
-        name="runbooks",
-        embedding_function=ef,
+    """Get the runbooks ChromaDB collection (shared client)."""
+    return get_collection(
+        "runbooks",
         metadata={"description": "Internal runbook documents for incident remediation"},
     )
-
-    return _collection
 
 
 def load_runbooks():
@@ -71,7 +49,6 @@ def load_runbooks():
         sections = content.split("\n## ")
         for i, section in enumerate(sections):
             if i == 0:
-                # First section includes the title (# header)
                 chunk_text = section.strip()
             else:
                 chunk_text = f"## {section.strip()}"
@@ -123,9 +100,7 @@ def search_runbooks(query: str) -> str:
             return f"No runbook matches found for: '{query}'"
 
         formatted = "Relevant runbook sections:\n\n"
-        for i, (doc, metadata) in enumerate(
-            zip(results["documents"][0], results["metadatas"][0])
-        ):
+        for doc, metadata in zip(results["documents"][0], results["metadatas"][0]):
             source = metadata.get("source", "unknown")
             formatted += f"--- From {source} ---\n{doc}\n\n"
 

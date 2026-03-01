@@ -5,12 +5,9 @@ resolved incidents so the agent can find similar patterns.
 """
 import logging
 
-import chromadb
-from chromadb.utils import embedding_functions
+from vigil.memory.chroma import get_collection
 
 logger = logging.getLogger("vigil.memory.seed")
-
-CHROMA_DIR = "./chroma_db"
 
 SEED_INCIDENTS = [
     {
@@ -131,14 +128,7 @@ SEED_INCIDENTS = [
 
 def seed_past_incidents():
     """Seed ChromaDB with past incidents for demo purposes."""
-    client = chromadb.PersistentClient(path=CHROMA_DIR)
-    ef = embedding_functions.SentenceTransformerEmbeddingFunction(
-        model_name="all-MiniLM-L6-v2"
-    )
-    collection = client.get_or_create_collection(
-        name="past_incidents",
-        embedding_function=ef,
-    )
+    collection = get_collection("past_incidents")
 
     # Check if already seeded
     existing = collection.get(ids=[s["id"] for s in SEED_INCIDENTS])

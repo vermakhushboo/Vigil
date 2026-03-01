@@ -6,6 +6,7 @@ and triggers the AI agent investigation pipeline.
 import uuid
 import asyncio
 import logging
+from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Dict
 
@@ -27,29 +28,17 @@ logging.basicConfig(
 )
 logger = logging.getLogger("vigil")
 
-# ─── App ───
-app = FastAPI(
-    title="Vigil — Incident Response Agent",
-    description="Autonomous AI incident response system",
-    version="0.2.0",
-)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 # ─── In-memory incident store ───
 incidents: Dict[str, Incident] = {}
 
+# ─── Deduplication: track active alerts by (alertname, service) ───
+_active_alerts: Dict[str, str] = {}  # key: "alertname:service" → value: incident_id
 
-# ─── Startup: seed ChromaDB ───
-@app.on_event("startup")
-async def startup_event():
-    """Seed ChromaDB with runbooks and past incidents on startup."""
+
+# ─── Lifespan (replaces deprecated on_event) ───
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Startup: seed ChromaDB with runbooks and past incidents."""
     logger.info("🚀 Vigil API starting up...")
     try:
         load_runbooks()
@@ -62,6 +51,27 @@ async def startup_event():
         logger.info("💾 Past incidents seeded into ChromaDB")
     except Exception as e:
         logger.warning(f"⚠️ Failed to seed past incidents: {e}")
+
+    yield  # App runs here
+
+    logger.info("🛑 Vigil API shutting down...")
+
+
+# ─── App ───
+app = FastAPI(
+    title="Vigil — Incident Response Agent",
+    description="Autonomous AI incident response system",
+    version="0.2.0",
+    lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 # ─── Health ───
@@ -76,9 +86,10 @@ async def receive_alert(request: Request):
     """
     Receives Alertmanager webhook payload.
     Parses alerts, creates Incident objects, and triggers investigation.
+    Deduplicates: skips if an active incident already exists for this alert.
     """
     payload = await request.json()
-    logger.info(f"📨 Received alert webhook")
+    logger.info("📨 Received alert webhook")
 
     created_incidents = []
 
@@ -91,15 +102,25 @@ async def receive_alert(request: Request):
         annotations = alert.get("annotations", {})
         status = alert.get("status", "firing")
 
+        alert_name = labels.get("alertname", "UnknownAlert")
+        service = labels.get("service", "unknown")
+
         # Skip resolved alerts
         if status == "resolved":
-            logger.info(f"✅ Received resolved alert: {labels.get('alertname', 'unknown')}")
+            dedup_key = f"{alert_name}:{service}"
+            _active_alerts.pop(dedup_key, None)
+            logger.info(f"✅ Resolved alert cleared: {alert_name} on {service}")
+            continue
+
+        # Deduplicate: skip if already investigating this alert
+        dedup_key = f"{alert_name}:{service}"
+        if dedup_key in _active_alerts:
+            existing_id = _active_alerts[dedup_key]
+            logger.info(f"⏭️ Skipping duplicate alert: {alert_name} on {service} (incident {existing_id} already active)")
             continue
 
         incident_id = str(uuid.uuid4())[:8]
-        alert_name = labels.get("alertname", "UnknownAlert")
         severity = labels.get("severity", "warning")
-        service = labels.get("service", "unknown")
         summary = annotations.get("summary", alert_name)
 
         incident = Incident(
@@ -113,6 +134,7 @@ async def receive_alert(request: Request):
         )
 
         incidents[incident_id] = incident
+        _active_alerts[dedup_key] = incident_id
         logger.info(
             f"🚨 INCIDENT CREATED [{incident_id}] "
             f"severity={severity} service={service} title={summary}"
@@ -177,7 +199,7 @@ async def get_incident(incident_id: str):
     incident = incidents.get(incident_id)
     if not incident:
         return JSONResponse(status_code=404, content={"error": "Incident not found"})
-    return incident.model_dump()
+    return incident.model_dump(mode="json")
 
 
 # ─── List All Incidents ───

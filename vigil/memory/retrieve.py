@@ -1,31 +1,13 @@
 """Vigil — Retrieve similar past incidents from ChromaDB."""
 import logging
 
-import chromadb
-from chromadb.utils import embedding_functions
+from vigil.memory.chroma import get_collection
 
 logger = logging.getLogger("vigil.memory.retrieve")
 
-CHROMA_DIR = "./chroma_db"
-
-_chroma_client = None
-_collection = None
-
 
 def _get_collection():
-    global _chroma_client, _collection
-    if _collection is not None:
-        return _collection
-
-    _chroma_client = chromadb.PersistentClient(path=CHROMA_DIR)
-    ef = embedding_functions.SentenceTransformerEmbeddingFunction(
-        model_name="all-MiniLM-L6-v2"
-    )
-    _collection = _chroma_client.get_or_create_collection(
-        name="past_incidents",
-        embedding_function=ef,
-    )
-    return _collection
+    return get_collection("past_incidents")
 
 
 def find_similar_incidents(query: str, top_k: int = 3) -> list:
@@ -44,7 +26,7 @@ def find_similar_incidents(query: str, top_k: int = 3) -> list:
 
 
 def count_similar(service: str, title: str) -> int:
-    """Count how many past incidents match a given service + similar title (pattern detection)."""
+    """Count how many past incidents match a given service + similar title."""
     collection = _get_collection()
     if collection.count() == 0:
         return 0

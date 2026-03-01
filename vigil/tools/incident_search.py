@@ -5,37 +5,17 @@ and returns how they were resolved.
 """
 import logging
 
-import chromadb
-from chromadb.utils import embedding_functions
+from vigil.memory.chroma import get_collection
 
 logger = logging.getLogger("vigil.tools.incident_search")
 
-CHROMA_DIR = "./chroma_db"
-
-_chroma_client = None
-_collection = None
-
 
 def _get_collection():
-    """Get or initialize the past_incidents ChromaDB collection."""
-    global _chroma_client, _collection
-
-    if _collection is not None:
-        return _collection
-
-    _chroma_client = chromadb.PersistentClient(path=CHROMA_DIR)
-
-    ef = embedding_functions.SentenceTransformerEmbeddingFunction(
-        model_name="all-MiniLM-L6-v2"
-    )
-
-    _collection = _chroma_client.get_or_create_collection(
-        name="past_incidents",
-        embedding_function=ef,
+    """Get the past_incidents ChromaDB collection (shared client)."""
+    return get_collection(
+        "past_incidents",
         metadata={"description": "Resolved past incidents for similarity matching"},
     )
-
-    return _collection
 
 
 def search_past_incidents(query: str) -> str:
